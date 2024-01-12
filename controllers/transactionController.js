@@ -69,7 +69,17 @@ const makeTransaction = async (req, res) => {
         await existingProduct.save();
       }
     }
-    res.json(savedTransaction);
+    const latestTransaction = await Transaction.findOne()
+      .populate({
+        path: "products.product", // Assuming "product" is the field inside the "products" array
+        model: "Product",
+        populate: [
+          { path: "brand", model: "Brand" },
+          { path: "vehicleType", model: "VehicleType" },
+        ],
+      })
+      .sort({ _id: -1 });
+    res.json(latestTransaction);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
