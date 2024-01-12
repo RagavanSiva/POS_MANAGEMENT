@@ -1,4 +1,9 @@
 const Product = require("../models/Product");
+const csvParser = require("json2csv").Parser;
+const crypto = require("crypto");
+const bwipjs = require("bwip-js");
+const fs = require("fs");
+const path = require("path");
 
 const getAllProducts = async (req, res) => {
   try {
@@ -81,10 +86,22 @@ const getProductById = async (req, res) => {
 
 // Controller function to create a new product
 const createProduct = async (req, res) => {
-  const { size, brand, remarks, pr, pattern, vehicleType, price, status } =
-    req.body;
+  const {
+    size,
+    brand,
+    remarks,
+    pr,
+    pattern,
+    vehicleType,
+    barcode,
+    price,
+    status,
+  } = req.body;
 
   try {
+    const newbarcode = Math.floor(
+      1000000000000 + Math.random() * 9000000000000
+    ).toString();
     const newProduct = new Product({
       size,
       brand,
@@ -94,6 +111,7 @@ const createProduct = async (req, res) => {
       vehicleType,
       price,
       status: status || true,
+      barcode: barcode ? barcode : newbarcode,
     });
 
     const savedProduct = await newProduct.save();
@@ -219,6 +237,131 @@ const updateStockLevels = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+const exportProductsCSV = async (req, res) => {
+  try {
+    let products = [];
+    var productData = await Product.find({})
+      .populate("brand")
+      .populate("vehicleType")
+      .sort({ createdAt: -1 })
+      .exec();
+    productData.forEach((product) => {
+      const {
+        size,
+        brand,
+        pattern,
+        vehicleType,
+        stockLevel,
+        subStockLevel,
+        pr,
+        price,
+        remarks,
+      } = product;
+      products.push({
+        size,
+        brand: brand.name,
+        pattern,
+        vehicleType: vehicleType.name,
+        stockLevel,
+        subStockLevel,
+        pr,
+        price,
+        remarks,
+      });
+    });
+
+    const csvFields = [
+      "Size",
+      "Brand",
+      "Pattern",
+      "VehicleType",
+      "StockLevel",
+      "ShopStockLevel",
+      "PR",
+      "Price",
+      "Remarks",
+    ];
+    const csv = new csvParser({ csvFields });
+    const csvData = csv.parse(products);
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      "attatchment: filename=productData.csv"
+    );
+    res.status(200).end(csvData);
+  } catch (error) {
+    res.send({ status: 400, msg: error.message });
+  }
+};
+
+const getProductByBarcode = async (req, res) => {
+  const { barcode } = req.params;
+
+  try {
+    const product = await Product.findOne({ barcode })
+      .populate("brand")
+      .populate("vehicleType")
+      .exec();
+
+    if (!product) {
+      return res
+        .status(404)
+        .json({ message: "Product not found with the provided barcode" });
+    }
+
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+const generateBarcodeImage = async (req, res) => {
+  const { productId } = req.params;
+
+  try {
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const { barcode } = product;
+
+    const imageBuffer = await generateBarcode(barcode);
+
+    // Set response headers for image download
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Disposition", `attachment; filename=${barcode}.png`);
+
+    // Send the image buffer as the response
+    res.end(imageBuffer);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const generateBarcode = (barcode) => {
+  return new Promise((resolve, reject) => {
+    bwipjs.toBuffer(
+      {
+        bcid: "code128", // or other barcode type
+        text: barcode,
+        scale: 3, // Controls the size of the barcode
+        includetext: true, // Includes the human-readable text below the barcode
+        textxalign: "center", // Aligns the text to the center
+      },
+      (err, buffer) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(buffer);
+        }
+      }
+    );
+  });
+};
+
 module.exports = {
   getAllProducts,
   getProductById,
@@ -228,4 +371,7 @@ module.exports = {
   getAllProductsBySearch,
   increaseStockLevel,
   updateStockLevels,
+  exportProductsCSV,
+  getProductByBarcode,
+  generateBarcodeImage,
 };
