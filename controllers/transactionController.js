@@ -1,6 +1,7 @@
 const Transaction = require("../models/Transaction");
 const Product = require("../models/Product");
-
+const { format } = require("date-fns");
+const csvParser = require("json2csv").Parser;
 // Function to generate a formatted transaction ID
 const generateTransactionId = async () => {
   try {
@@ -263,6 +264,62 @@ const deleteTransaction = async (req, res) => {
   }
 };
 
+const exportTransactionCSV = async (req, res) => {
+  try {
+    let transactionlist = [];
+    const { startDate, endDate, isSuspended = false } = req.query;
+    const isSuspendedFilter = isSuspended
+      ? { isSuspended: isSuspended === "true" }
+      : {};
+
+    const filter = {};
+
+    if (startDate) {
+      filter.transactionDate = { $gte: new Date(startDate) };
+    }
+
+    if (endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999); // Set to end of the day
+      filter.transactionDate = {
+        ...filter.transactionDate,
+        $lte: endOfDay,
+      };
+    }
+
+    // Build the query based on the date and suspension filter
+    const query = { ...filter, ...isSuspendedFilter };
+
+    // Retrieve transactions from the database with optional date filter
+    const transactions = await Transaction.find(query).sort({
+      transactionDate: "desc",
+    });
+    transactions.forEach((transaction) => {
+      const { customId, totalAmount, recievedAmount, transactionDate } =
+        transaction;
+      transactionlist.push({
+        customId,
+        totalAmount,
+        recievedAmount,
+        transactionDate: format(transactionDate, "yyyy-MM-dd"),
+      });
+    });
+
+    const csvFields = ["Bill No", "Total Amount", "Receieved Amount", "Date"];
+    const csv = new csvParser({ csvFields });
+    const csvData = csv.parse(transactionlist);
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      "attatchment: filename=transactionData.csv"
+    );
+    res.status(200).end(csvData);
+  } catch (error) {
+    res.send({ status: 400, msg: error.message });
+  }
+};
+
 module.exports = {
   makeTransaction,
   getTransactions,
@@ -270,4 +327,5 @@ module.exports = {
   getTotalAmountForCurrentMonth,
   updateTransaction,
   deleteTransaction,
+  exportTransactionCSV,
 };

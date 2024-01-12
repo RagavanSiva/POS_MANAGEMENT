@@ -5,6 +5,7 @@ const transactionController = require("../controllers/transactionController");
 router.post("/", transactionController.makeTransaction);
 router.put("/", transactionController.updateTransaction);
 router.get("/", transactionController.getTransactions);
+router.get("/download", transactionController.exportTransactionCSV);
 router.delete("/:transactionId", transactionController.deleteTransaction);
 router.get("/suspended-sales", transactionController.getSuspendedTransactions);
 router.get(

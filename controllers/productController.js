@@ -340,6 +340,30 @@ const generateBarcodeImage = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+const getLowStockProductsWarehouse = async (req, res) => {
+  try {
+    // Find products with stock level less than 10
+    const lowStockProducts = await Product.find({ stockLevel: { $lt: 10 } })
+      .populate("brand")
+      .populate("vehicleType");
+
+    res.json(lowStockProducts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+const getLowStockProductsShop = async (req, res) => {
+  try {
+    // Find products with stock level less than 10
+    const lowStockProducts = await Product.find({ subStockLevel: { $lt: 10 } })
+      .populate("brand")
+      .populate("vehicleType");
+
+    res.json(lowStockProducts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 const generateBarcode = (barcode) => {
   return new Promise((resolve, reject) => {
@@ -374,4 +398,6 @@ module.exports = {
   exportProductsCSV,
   getProductByBarcode,
   generateBarcodeImage,
+  getLowStockProductsWarehouse,
+  getLowStockProductsShop,
 };

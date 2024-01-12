@@ -4,6 +4,11 @@ const productController = require("../controllers/productController");
 
 // Define routes for Product
 router.get("/", productController.getAllProducts);
+router.get(
+  "/lowstock-warehouse",
+  productController.getLowStockProductsWarehouse
+);
+router.get("/lowstock-shop", productController.getLowStockProductsShop);
 router.get("/barcode/:barcode", productController.getProductByBarcode);
 router.get("/csv-download", productController.exportProductsCSV);
 router.get("/search", productController.getAllProductsBySearch);
