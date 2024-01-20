@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
-
+const paymentMethodEnum = ["cash", "cheque", "AC"];
 const transactionSchema = new Schema({
   customId: {
     type: String,
@@ -35,6 +35,13 @@ const transactionSchema = new Schema({
     type: Number,
     required: true,
   },
+  discount: {
+    type: Number,
+  },
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Customer",
+  },
   isSuspended: {
     type: Boolean,
     default: false,
@@ -42,6 +49,14 @@ const transactionSchema = new Schema({
   transactionDate: {
     type: Date,
     default: Date.now,
+  },
+  paymentMethod: {
+    type: String,
+    enum: paymentMethodEnum,
+    required: true,
+  },
+  chequeNo: {
+    type: String,
   },
 });
 

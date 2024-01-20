@@ -50,6 +50,7 @@ const getAllProductsBySearch = async (req, res) => {
       $or: [
         { "brand.name": { $regex: regex } },
         { size: { $regex: regex } },
+        { barcode: { $regex: regex } },
         { pattern: { $regex: regex } },
         { "vehicleType.name": { $regex: regex } },
         // Exclude the "pr" field if the search term is not a valid number
@@ -123,8 +124,7 @@ const createProduct = async (req, res) => {
 
 // Controller function to update a product
 const updateProduct = async (req, res) => {
-  const { size, brand, remarks, pr, pattern, vehicleType, price, status } =
-    req.body;
+  const { size, brand, remarks, pr, pattern, vehicleType, price } = req.body;
 
   try {
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -136,7 +136,6 @@ const updateProduct = async (req, res) => {
         vehicleType,
         price,
         pr,
-        status,
         remarks,
       },
       { new: true } // Return the updated document

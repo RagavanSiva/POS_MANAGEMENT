@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3500;
 console.log(process.env.NODE_ENV);
 
 connectDB();
-app.use(logger);
+// app.use(logger);
 app.use(cors());
 app.use(express.json());
 
@@ -23,6 +23,7 @@ app.use("/brand", require("./routes/brandRoute"));
 app.use("/vehicle", require("./routes/vehicleRoute"));
 app.use("/product", require("./routes/productRoute"));
 app.use("/transaction", require("./routes/tranactionRoute"));
+app.use("/customer", require("./routes/customerRoute"));
 
 app.get("/", (req, res) => {
   res.json({

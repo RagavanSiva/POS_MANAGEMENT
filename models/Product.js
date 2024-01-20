@@ -14,12 +14,10 @@ const productSchema = new mongoose.Schema({
   },
   pattern: {
     type: String,
-    required: true,
   },
   vehicleType: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "VehicleType",
-    required: true,
   },
   stockLevel: {
     type: Number,

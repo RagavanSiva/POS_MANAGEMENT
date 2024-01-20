@@ -22,7 +22,15 @@ const generateTransactionId = async () => {
 
 const makeTransaction = async (req, res) => {
   try {
-    const { products, recievedAmount, isSuspended } = req.body;
+    const {
+      products,
+      recievedAmount,
+      isSuspended,
+      paymentMethod,
+      customer,
+      discount,
+      chequeNo,
+    } = req.body;
 
     if (!products || !Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ message: "Invalid request parameters" });
@@ -43,6 +51,10 @@ const makeTransaction = async (req, res) => {
       totalAmount,
       recievedAmount: recievedAmount,
       isSuspended: isSuspended,
+      paymentMethod: paymentMethod,
+      customer: customer,
+      discount: discount,
+      chequeNo: chequeNo,
     });
 
     // Save the transaction to the database

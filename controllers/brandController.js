@@ -17,7 +17,9 @@ const createBrand = async (req, res) => {
 
   try {
     // Check for duplicate brand name
-    const existingBrand = await Brand.findOne({ name });
+    const existingBrand = await Brand.findOne({
+      name: { $regex: new RegExp("^" + name + "$", "i") },
+    });
 
     if (existingBrand) {
       return res
