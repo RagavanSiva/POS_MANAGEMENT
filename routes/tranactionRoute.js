@@ -12,5 +12,9 @@ router.get(
   "/current-month-average",
   transactionController.getTotalAmountForCurrentMonth
 );
+router.patch(
+  "/isCompleted/:transactionId",
+  transactionController.updateIsCompleted
+);
 
 module.exports = router;

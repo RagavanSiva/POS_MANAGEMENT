@@ -58,6 +58,10 @@ const transactionSchema = new Schema({
   chequeNo: {
     type: String,
   },
+  isCompleted: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const Transaction = mongoose.model("Transaction", transactionSchema);

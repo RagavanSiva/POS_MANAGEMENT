@@ -21,15 +21,20 @@ const getAllProducts = async (req, res) => {
 
     // Calculate skip value for pagination
     const skip = (page - 1) * pageSize;
-
+    const totalCount = await Product.countDocuments(filter);
     // Fetching products with filters and pagination
     const products = await Product.find(filter)
       .populate("brand")
       .populate("vehicleType")
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(pageSize, 10))
       .exec();
 
-    res.json(products);
+    res.json({
+      totalSize: totalCount,
+      products: products,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -30,6 +30,7 @@ const makeTransaction = async (req, res) => {
       customer,
       discount,
       chequeNo,
+      isCompleted,
     } = req.body;
 
     if (!products || !Array.isArray(products) || products.length === 0) {
@@ -55,6 +56,7 @@ const makeTransaction = async (req, res) => {
       customer: customer,
       discount: discount,
       chequeNo: chequeNo,
+      isCompleted,
     });
 
     // Save the transaction to the database
@@ -100,7 +102,15 @@ const makeTransaction = async (req, res) => {
 const getTransactions = async (req, res) => {
   try {
     // Extract startDate and endDate from query parameters
-    const { startDate, endDate, isSuspended } = req.query;
+    const {
+      startDate,
+      endDate,
+      isSuspended,
+      paymentMethod,
+      isCompleted,
+      page = 1,
+      limit = 10,
+    } = req.query;
     const isSuspendedFilter = isSuspended
       ? { isSuspended: isSuspended === "true" }
       : {};
@@ -119,14 +129,25 @@ const getTransactions = async (req, res) => {
         $lte: endOfDay,
       };
     }
-
+    if (paymentMethod) {
+      filter.paymentMethod = paymentMethod;
+    }
+    isCompleted
+      ? (filter.isCompleted = isCompleted)
+      : (filter.isCompleted = false);
     // Build the query based on the date and suspension filter
     const query = { ...filter, ...isSuspendedFilter };
+    const skip = (page - 1) * limit;
 
+    const totalCount = await Transaction.countDocuments(query);
     // Retrieve transactions from the database with optional date filter
-    const transactions = await Transaction.find(query).sort({
-      transactionDate: "desc",
-    });
+    const transactions = await Transaction.find(query)
+      .sort({
+        transactionDate: "desc",
+      })
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .populate("customer");
 
     // Map transactions to include customId, total price, and date
     const mappedTransactions = transactions.map((transaction) => {
@@ -135,11 +156,18 @@ const getTransactions = async (req, res) => {
         totalPrice: transaction.totalAmount,
         transactionDate: transaction.transactionDate,
         recievedAmount: transaction.recievedAmount,
+        paymentMethod: transaction.paymentMethod,
+        customer: transaction.customer,
+        chequeNo: transaction.chequeNo,
+        _id: transaction._id,
         // Add more fields if needed
       };
     });
 
-    res.json(mappedTransactions);
+    res.json({
+      totalSize: totalCount,
+      transactions: mappedTransactions,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -198,6 +226,7 @@ const getTotalAmountForCurrentMonth = async (req, res) => {
         $lte: lastDayOfMonth,
       },
       isSuspended: false,
+      isCompleted: true,
     });
 
     // Calculate the total amount for the transactions
@@ -214,7 +243,16 @@ const getTotalAmountForCurrentMonth = async (req, res) => {
 
 const updateTransaction = async (req, res) => {
   try {
-    const { transactionId, newProducts, recievedAmount } = req.body;
+    const {
+      transactionId,
+      newProducts,
+      recievedAmount,
+      paymentMethod,
+      customer,
+      discount,
+      chequeNo,
+      isCompleted,
+    } = req.body;
 
     if (
       !transactionId ||
@@ -247,6 +285,12 @@ const updateTransaction = async (req, res) => {
     // Update the transaction with new products
     existingTransaction.products = newProducts;
     existingTransaction.isSuspended = false;
+    existingTransaction.paymentMethod = paymentMethod;
+    existingTransaction.customer = customer;
+    existingTransaction.discount = discount;
+    existingTransaction.chequeNo = chequeNo;
+    existingTransaction.isCompleted = isCompleted;
+
     existingTransaction.recievedAmount = recievedAmount;
     existingTransaction.totalAmount = newProducts.reduce(
       (total, product) => total + (product.amount || 0),
@@ -308,7 +352,7 @@ const exportTransactionCSV = async (req, res) => {
         $lte: endOfDay,
       };
     }
-
+    filter.isCompleted = true;
     // Build the query based on the date and suspension filter
     const query = { ...filter, ...isSuspendedFilter };
 
@@ -342,6 +386,33 @@ const exportTransactionCSV = async (req, res) => {
   }
 };
 
+const updateIsCompleted = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    const { isCompleted } = req.body;
+
+    if (isCompleted === undefined || typeof isCompleted !== "boolean") {
+      return res
+        .status(400)
+        .json({ message: "Invalid value for isCompleted." });
+    }
+
+    const updatedTransaction = await Transaction.findByIdAndUpdate(
+      transactionId,
+      { isCompleted },
+      { new: true }
+    );
+
+    if (!updatedTransaction) {
+      return res.status(404).json({ message: "Transaction not found." });
+    }
+
+    res.json(updatedTransaction);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   makeTransaction,
   getTransactions,
@@ -350,4 +421,5 @@ module.exports = {
   updateTransaction,
   deleteTransaction,
   exportTransactionCSV,
+  updateIsCompleted,
 };

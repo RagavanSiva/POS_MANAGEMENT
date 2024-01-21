@@ -21,6 +21,7 @@ const customerController = {
         ? {
             $or: [
               { name: { $regex: filter, $options: "i" } }, // Case-insensitive regex for name
+              { vehicleNumber: { $regex: filter, $options: "i" } }, // Case-insensitive regex for name
               { phoneNumber: { $regex: filter, $options: "i" } }, // Case-insensitive regex for phoneNumber
               { address: { $regex: filter, $options: "i" } }, // Case-insensitive regex for address
             ],
