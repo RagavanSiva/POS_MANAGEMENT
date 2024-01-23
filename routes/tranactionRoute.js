@@ -16,5 +16,9 @@ router.patch(
   "/isCompleted/:transactionId",
   transactionController.updateIsCompleted
 );
+router.patch(
+  "/update-received-amount/:transactionId",
+  transactionController.updateReceivedAmount
+);
 
 module.exports = router;

@@ -31,11 +31,17 @@ const transactionSchema = new Schema({
     type: Number,
     required: true,
   },
+  additionalAmount: {
+    type: Number,
+  },
   recievedAmount: {
     type: Number,
     required: true,
   },
   discount: {
+    type: Number,
+  },
+  changefee: {
     type: Number,
   },
   customer: {
@@ -57,6 +63,9 @@ const transactionSchema = new Schema({
   },
   chequeNo: {
     type: String,
+  },
+  chequeDueDate: {
+    type: Date,
   },
   isCompleted: {
     type: Boolean,

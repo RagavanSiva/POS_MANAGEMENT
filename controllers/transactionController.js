@@ -30,7 +30,11 @@ const makeTransaction = async (req, res) => {
       customer,
       discount,
       chequeNo,
+      chequeDueDate,
       isCompleted,
+      additionalAmount,
+      totalAmount,
+      changefee,
     } = req.body;
 
     if (!products || !Array.isArray(products) || products.length === 0) {
@@ -40,10 +44,6 @@ const makeTransaction = async (req, res) => {
     // Generate transaction ID
     const transactionId = await generateTransactionId();
     // Calculate totalAmount for the entire transaction
-    const totalAmount = products.reduce(
-      (total, product) => total + (product.amount || 0),
-      0
-    );
 
     // Create a new transaction
     const newTransaction = new Transaction({
@@ -56,7 +56,10 @@ const makeTransaction = async (req, res) => {
       customer: customer,
       discount: discount,
       chequeNo: chequeNo,
+      chequeDueDate: chequeDueDate ? new Date(chequeDueDate) : null,
       isCompleted,
+      additionalAmount,
+      changefee,
     });
 
     // Save the transaction to the database
@@ -108,6 +111,7 @@ const getTransactions = async (req, res) => {
       isSuspended,
       paymentMethod,
       isCompleted,
+      customerName,
       page = 1,
       limit = 10,
     } = req.query;
@@ -135,12 +139,16 @@ const getTransactions = async (req, res) => {
     isCompleted
       ? (filter.isCompleted = isCompleted)
       : (filter.isCompleted = false);
+    if (customerName) {
+      filter.customer = customerName;
+    }
     // Build the query based on the date and suspension filter
     const query = { ...filter, ...isSuspendedFilter };
     const skip = (page - 1) * limit;
 
     const totalCount = await Transaction.countDocuments(query);
     // Retrieve transactions from the database with optional date filter
+    console.log(query);
     const transactions = await Transaction.find(query)
       .sort({
         transactionDate: "desc",
@@ -159,6 +167,7 @@ const getTransactions = async (req, res) => {
         paymentMethod: transaction.paymentMethod,
         customer: transaction.customer,
         chequeNo: transaction.chequeNo,
+        chequeDueDate: transaction.chequeDueDate,
         _id: transaction._id,
         // Add more fields if needed
       };
@@ -246,12 +255,16 @@ const updateTransaction = async (req, res) => {
     const {
       transactionId,
       newProducts,
-      recievedAmount,
       paymentMethod,
       customer,
       discount,
       chequeNo,
+      chequeDueDate,
       isCompleted,
+      additionalAmount,
+      totalAmount,
+      changefee,
+      recievedAmount,
     } = req.body;
 
     if (
@@ -289,13 +302,13 @@ const updateTransaction = async (req, res) => {
     existingTransaction.customer = customer;
     existingTransaction.discount = discount;
     existingTransaction.chequeNo = chequeNo;
+    existingTransaction.chequeDueDate = chequeDueDate;
+    existingTransaction.additionalAmount = additionalAmount;
+    existingTransaction.changefee = changefee;
     existingTransaction.isCompleted = isCompleted;
 
     existingTransaction.recievedAmount = recievedAmount;
-    existingTransaction.totalAmount = newProducts.reduce(
-      (total, product) => total + (product.amount || 0),
-      0
-    );
+    existingTransaction.totalAmount = totalAmount;
 
     // Save the updated transaction
     const updatedTransaction = await existingTransaction.save();
@@ -412,6 +425,33 @@ const updateIsCompleted = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+const updateReceivedAmount = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    const { deductAmount } = req.body;
+
+    if (!transactionId || !deductAmount || isNaN(deductAmount)) {
+      return res.status(400).json({ message: "Invalid request parameters" });
+    }
+
+    // Find the existing transaction by ID
+    const existingTransaction = await Transaction.findById(transactionId);
+
+    if (!existingTransaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+
+    // Deduct the specified amount from the received amount
+    existingTransaction.recievedAmount += parseFloat(deductAmount);
+
+    // Save the updated transaction
+    const updatedTransaction = await existingTransaction.save();
+
+    res.json(updatedTransaction);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 module.exports = {
   makeTransaction,
@@ -422,4 +462,5 @@ module.exports = {
   deleteTransaction,
   exportTransactionCSV,
   updateIsCompleted,
+  updateReceivedAmount,
 };

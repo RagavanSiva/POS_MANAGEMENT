@@ -105,6 +105,18 @@ const createProduct = async (req, res) => {
   } = req.body;
 
   try {
+    // Check if a product with the same combination already exists
+    const existingProduct = await Product.findOne({ size, brand, pattern, pr });
+
+    if (existingProduct) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "A product with the same size, brand, pattern, and pr already exists.",
+        });
+    }
+
     const newbarcode = Math.floor(
       1000000000000 + Math.random() * 9000000000000
     ).toString();
@@ -129,9 +141,11 @@ const createProduct = async (req, res) => {
 
 // Controller function to update a product
 const updateProduct = async (req, res) => {
-  const { size, brand, remarks, pr, pattern, vehicleType, price } = req.body;
+  const { size, brand, remarks, pr, pattern, vehicleType, price, barcode } =
+    req.body;
 
   try {
+    const product = await Product.findById(req.params.id);
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
       {
@@ -142,6 +156,7 @@ const updateProduct = async (req, res) => {
         price,
         pr,
         remarks,
+        barcode: barcode ? barcode : product.barcode,
       },
       { new: true } // Return the updated document
     );
